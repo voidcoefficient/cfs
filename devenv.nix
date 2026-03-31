@@ -14,7 +14,5 @@
   languages.rust = {
     enable = true;
     channel = "stable";
-
-    mold.enable = true; # faster drop-in replacement for existing unix linkers
   };
 }
