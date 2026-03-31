@@ -9,7 +9,7 @@ mod commands;
 mod config;
 mod error;
 mod flags;
-mod json_object;
+mod storage;
 
 fn main() -> ActionResult {
 	let args: Vec<String> = env::args().collect();
@@ -26,10 +26,12 @@ fn main() -> ActionResult {
 		.command(clear());
 
 	match app.run_with_result(args) {
-		Ok(_) => Ok(()),
+		Ok(_) => (),
 		Err(action_error) => {
 			eprintln!("{}", action_error.message);
 			exit(1)
 		}
-	}
+	};
+
+	Ok(())
 }
