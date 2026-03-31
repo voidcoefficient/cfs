@@ -10,7 +10,7 @@ pub fn init() -> Command {
 		.description("inits config file")
 		.alias("i")
 		.usage(format!("{} init", env!("CARGO_PKG_NAME")))
-		.action(init_action)
+		.action_with_result(init_action)
 }
 
 pub fn list() -> Command {
@@ -18,7 +18,7 @@ pub fn list() -> Command {
 		.description("list all keys and values")
 		.alias("l")
 		.usage(format!("{} list", env!("CARGO_PKG_NAME")))
-		.action(list_action)
+		.action_with_result(list_action)
 		.flag(force_create())
 }
 
@@ -27,7 +27,7 @@ pub fn clear() -> Command {
 		.description("clear your config file")
 		.alias("c")
 		.usage(format!("{} clear", env!("CARGO_PKG_NAME")))
-		.action(clear_action)
+		.action_with_result(clear_action)
 }
 
 pub fn remove_value() -> Command {
@@ -35,7 +35,7 @@ pub fn remove_value() -> Command {
 		.description("remove a value")
 		.alias("r")
 		.usage(format!("{} remove foo", env!("CARGO_PKG_NAME")))
-		.action(remove_action)
+		.action_with_result(remove_action)
 }
 
 pub fn get_value() -> Command {
@@ -43,7 +43,7 @@ pub fn get_value() -> Command {
 		.description("get a value")
 		.alias("g")
 		.usage(format!("{} get foo", env!("CARGO_PKG_NAME")))
-		.action(get_action)
+		.action_with_result(get_action)
 		.flag(ignore_null())
 		.flag(force_create())
 }
@@ -53,6 +53,6 @@ pub fn set_value() -> Command {
 		.description("set a value")
 		.alias("s")
 		.usage(format!("{} set foo bar", env!("CARGO_PKG_NAME")))
-		.action(set_action)
+		.action_with_result(set_action)
 		.flag(force_create())
 }

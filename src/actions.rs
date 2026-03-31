@@ -1,109 +1,114 @@
-use std::fs::File;
-use std::io::Write;
 use std::path::Path;
-use std::process::exit;
 
-use json::JsonValue;
-use seahorse::Context;
+use seahorse::{ActionError, ActionResult, Context};
 
-use crate::json_object::{get_json_object_or_create, set_json_object};
-use crate::{config::get_config_path, error::invalid};
+use crate::config::get_config_path;
+use crate::error::invalid;
+use crate::storage::json::CfsJSONStore;
+use crate::storage::{CfsStorage, CfsValue};
 
-pub fn init_action(c: &Context) {
+pub fn init_action(_c: &Context) -> ActionResult {
 	let config_path = get_config_path();
 	let path = Path::new(&config_path);
 
 	if path.exists() {
 		println!("config file already exists");
-	} else {
-		clear_action(c);
 	}
+
+	CfsJSONStore::with_force_create(true);
+
+	Ok(())
 }
 
-pub fn list_action(c: &Context) {
-	let conf = get_json_object_or_create(c.bool_flag("force-create"));
+pub fn list_action(c: &Context) -> ActionResult {
+	let store = CfsJSONStore::with_force_create(c.bool_flag("force-create"));
 
-	for (key, value) in conf.entries() {
+	for (key, value) in store.all().iter() {
 		println!("{}\t{}", key, value);
 	}
+
+	Ok(())
 }
 
-pub fn clear_action(_c: &Context) {
-	let mut file = File::create(get_config_path()).unwrap();
-	write!(file, "{}", "{}").unwrap();
+pub fn clear_action(_c: &Context) -> ActionResult {
+	let mut store = CfsJSONStore::new();
+
+	store.clear();
+
 	println!("cleared config file at '{:?}'", get_config_path());
+
+	Ok(())
 }
 
-pub fn get_action(c: &Context) {
+pub fn get_action(c: &Context) -> ActionResult {
 	if c.args.len() != 1 {
-		return invalid("command");
+		return Err(invalid("command"));
 	}
 
-	let conf = get_json_object_or_create(c.bool_flag("force-create"));
-	let key = c.args.get(0);
+	let key = c.args.get(0).to_owned();
 
 	let Some(key) = key else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
-	if conf.has_key(&key) {
-		println!("{}", conf[key]);
-		return;
+	let store = CfsJSONStore::new();
+
+	let value = store.get(key);
+
+	match value {
+		Some(v) => {
+			println!("{}", v)
+		}
+		None => {
+			if c.bool_flag("ignore_null") {
+				println!();
+			} else {
+				return Err(ActionError {
+					message: format!("could not find key '{}'", key),
+				});
+			}
+		}
 	}
 
-	if c.bool_flag("ignore-null") {
-		println!();
-	} else {
-		eprintln!("could not find key '{}'", key);
-		exit(1);
-	}
+	Ok(())
 }
 
-pub fn set_action(c: &Context) {
+pub fn set_action(c: &Context) -> ActionResult {
 	if c.args.len() != 2 {
-		return invalid("command");
+		return Err(invalid("command"));
 	}
 
-	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
-
 	let Some(key) = c.args.get(0) else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
 	let Some(value_str) = c.args.get(1) else {
-		return invalid("value");
+		return Err(invalid("value"));
 	};
 
-	let json_value = JsonValue::from(value_str.as_str());
-	let value = json_value.as_str().unwrap();
+	let mut store = CfsJSONStore::new();
 
-	if conf.has_key(key) {
-		conf.remove(key);
-	}
+	let value = CfsValue::Value(value_str.to_owned());
+	store.set(key, value.clone());
 
-	conf.insert(key, value).unwrap();
+	println!("{}\t{}", key, value);
 
-	match set_json_object(conf) {
-		Ok(_) => println!("updated config file"),
-		Err(err) => eprintln!("{}", err),
-	}
+	Ok(())
 }
 
-pub fn remove_action(c: &Context) {
-	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
+pub fn remove_action(c: &Context) -> ActionResult {
 	let Some(key) = c.args.get(0) else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
-	if !conf.has_key(&key) {
-		println!("key '{}' was not found", key);
-		return;
+	let mut store = CfsJSONStore::new();
+
+	match store.remove(key) {
+		Some(value) => println!("{}\t{}", key, value),
+		None => {
+			println!("key '{}' was not found", key);
+		}
 	}
 
-	conf.remove(&key);
-
-	match set_json_object(conf) {
-		Ok(_) => println!("updated config file"),
-		Err(err) => eprintln!("{}", err),
-	}
+	Ok(())
 }
