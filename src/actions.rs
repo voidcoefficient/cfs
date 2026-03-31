@@ -10,100 +10,100 @@ use crate::json_object::{get_json_object_or_create, set_json_object};
 use crate::{config::get_config_path, error::invalid};
 
 pub fn init_action(c: &Context) {
-    let config_path = get_config_path();
-    let path = Path::new(&config_path);
+	let config_path = get_config_path();
+	let path = Path::new(&config_path);
 
-    if path.exists() {
-        println!("config file already exists");
-    } else {
-        clear_action(c);
-    }
+	if path.exists() {
+		println!("config file already exists");
+	} else {
+		clear_action(c);
+	}
 }
 
 pub fn list_action(c: &Context) {
-    let conf = get_json_object_or_create(c.bool_flag("force-create"));
+	let conf = get_json_object_or_create(c.bool_flag("force-create"));
 
-    for (key, value) in conf.entries() {
-        println!("{}\t{}", key, value);
-    }
+	for (key, value) in conf.entries() {
+		println!("{}\t{}", key, value);
+	}
 }
 
 pub fn clear_action(_c: &Context) {
-    let mut file = File::create(get_config_path()).unwrap();
-    write!(file, "{}", "{}").unwrap();
-    println!("cleared config file at '{:?}'", get_config_path());
+	let mut file = File::create(get_config_path()).unwrap();
+	write!(file, "{}", "{}").unwrap();
+	println!("cleared config file at '{:?}'", get_config_path());
 }
 
 pub fn get_action(c: &Context) {
-    if c.args.len() != 1 {
-        invalid("command");
-    }
+	if c.args.len() != 1 {
+		return invalid("command");
+	}
 
-    let conf = get_json_object_or_create(c.bool_flag("force-create"));
-    let key = c.args.get(0);
+	let conf = get_json_object_or_create(c.bool_flag("force-create"));
+	let key = c.args.get(0);
 
-    let Some(key) = key else {
-        return invalid("key");
-    };
+	let Some(key) = key else {
+		return invalid("key");
+	};
 
-    if conf.has_key(&key) {
-        println!("{}", conf[key]);
-        return;
-    }
+	if conf.has_key(&key) {
+		println!("{}", conf[key]);
+		return;
+	}
 
-    if c.bool_flag("ignore-null") {
-        println!();
-    } else {
-        eprintln!("could not find key '{}'", key);
-        exit(1);
-    }
+	if c.bool_flag("ignore-null") {
+		println!();
+	} else {
+		eprintln!("could not find key '{}'", key);
+		exit(1);
+	}
 }
 
 pub fn set_action(c: &Context) {
-    if c.args.len() != 2 {
-        invalid("command");
-    }
+	if c.args.len() != 2 {
+		return invalid("command");
+	}
 
-    let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
+	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
 
-    let Some(key) = c.args.get(0) else {
-        return invalid("key");
-    };
+	let Some(key) = c.args.get(0) else {
+		return invalid("key");
+	};
 
-    let Some(value_str) = c.args.get(1) else {
-        return invalid("value");
-    };
+	let Some(value_str) = c.args.get(1) else {
+		return invalid("value");
+	};
 
-    let json_value = JsonValue::from(value_str.as_str());
-    let value = json_value.as_str().unwrap();
+	let json_value = JsonValue::from(value_str.as_str());
+	let value = json_value.as_str().unwrap();
 
-    if conf.has_key(key) {
-        conf.remove(key);
-    }
+	if conf.has_key(key) {
+		conf.remove(key);
+	}
 
-    conf.insert(key, value).unwrap();
+	conf.insert(key, value).unwrap();
 
-    match set_json_object(conf) {
-        Ok(_) => println!("updated config file"),
-        Err(err) => eprintln!("{}", err),
-    }
+	match set_json_object(conf) {
+		Ok(_) => println!("updated config file"),
+		Err(err) => eprintln!("{}", err),
+	}
 }
 
 pub fn remove_action(c: &Context) {
-    let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
-    let Some(key) = c.args.get(0) else {
-        return invalid("key");
-    };
+	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
+	let Some(key) = c.args.get(0) else {
+		return invalid("key");
+	};
 
-    if !conf.has_key(&key) {
-        println!("key '{}' was not found", key);
-        return;
-    }
+	if !conf.has_key(&key) {
+		println!("key '{}' was not found", key);
+		return;
+	}
 
-    conf.remove(&key);
+	conf.remove(&key);
 
-    match set_json_object(conf) {
-        Ok(_) => println!("updated config file"),
-        Err(err) => eprintln!("{}", err),
-    }
+	match set_json_object(conf) {
+		Ok(_) => println!("updated config file"),
+		Err(err) => eprintln!("{}", err),
+	}
 }
