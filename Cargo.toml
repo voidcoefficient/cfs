@@ -1,12 +1,12 @@
 [package]
 name = "cfs"
-authors = ["Alex Andrade Albuquerque <alex@alexaa.dev>"]
-description = "Quickly save and retrieve values for shell scripts"
+authors = ["Marla Albuquerque <marla@albuque.com>"]
+description = "local key-value store for shell scripts"
 version = "1.0.0"
 edition = "2021"
 license-file = "LICENSE"
-homepage = "https://github.com/minsk-dev/cfs"
-repository = "https://github.com/minsk-dev/cfs"
+homepage = "https://github.com/voidcoefficient/cfs"
+repository = "https://github.com/voidcoefficient/cfs"
 keywords = ["cli", "shell-tool", "shell"]
 categories = ["command-line-utilities"]
 
