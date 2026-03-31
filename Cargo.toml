@@ -2,7 +2,7 @@
 name = "cfs"
 authors = ["Marla Albuquerque <marla@albuque.com>"]
 description = "local key-value store for shell scripts"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 license-file = "LICENSE"
 homepage = "https://github.com/voidcoefficient/cfs"
