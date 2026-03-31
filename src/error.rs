@@ -1,6 +1,11 @@
-use std::process::exit;
+use seahorse::ActionError;
 
-pub fn invalid(cause: &str) {
-	eprintln!("invalid {}. get help by running `conf set --help`", cause);
-	exit(1);
+pub fn invalid(cause: &str) -> ActionError {
+	ActionError {
+		message: format!(
+			"invalid {}. get help by running `{} --help`",
+			cause,
+			env!("CARGO_PKG_NAME")
+		),
+	}
 }
