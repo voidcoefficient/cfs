@@ -4,8 +4,8 @@ use seahorse::{ActionError, ActionResult, Context};
 
 use crate::config::get_config_path;
 use crate::error::invalid;
-use crate::storage::json::CfsJSONStore;
-use crate::storage::{CfsStorage, CfsValue};
+use crate::storage::json::JSONStore;
+use crate::storage::{Store, StoreValue};
 
 pub fn init_action(_c: &Context) -> ActionResult {
 	let config_path = get_config_path();
@@ -15,13 +15,13 @@ pub fn init_action(_c: &Context) -> ActionResult {
 		println!("config file already exists");
 	}
 
-	CfsJSONStore::with_force_create(true);
+	JSONStore::with_force_create(true);
 
 	Ok(())
 }
 
 pub fn list_action(c: &Context) -> ActionResult {
-	let store = CfsJSONStore::with_force_create(c.bool_flag("force-create"));
+	let store = JSONStore::with_force_create(c.bool_flag("force-create"));
 
 	for (key, value) in store.all().iter() {
 		println!("{}\t{}", key, value);
@@ -31,7 +31,7 @@ pub fn list_action(c: &Context) -> ActionResult {
 }
 
 pub fn clear_action(_c: &Context) -> ActionResult {
-	let mut store = CfsJSONStore::new();
+	let mut store = JSONStore::new();
 
 	store.clear();
 
@@ -51,7 +51,7 @@ pub fn get_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let store = CfsJSONStore::new();
+	let store = JSONStore::new();
 
 	let value = store.get(key);
 
@@ -86,9 +86,9 @@ pub fn set_action(c: &Context) -> ActionResult {
 		return Err(invalid("value"));
 	};
 
-	let mut store = CfsJSONStore::new();
+	let mut store = JSONStore::new();
 
-	let value = CfsValue::Value(value_str.to_owned());
+	let value = StoreValue::Value(value_str.to_owned());
 	store.set(key, value.clone());
 
 	println!("{}\t{}", key, value);
@@ -101,7 +101,7 @@ pub fn remove_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let mut store = CfsJSONStore::new();
+	let mut store = JSONStore::new();
 
 	match store.remove(key) {
 		Some(value) => println!("{}\t{}", key, value),
