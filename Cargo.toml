@@ -14,4 +14,5 @@ categories = ["command-line-utilities"]
 
 [dependencies]
 json = "0.12.4"
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 seahorse = "2.1.0"

@@ -2,26 +2,26 @@ use std::path::Path;
 
 use seahorse::{ActionError, ActionResult, Context};
 
-use crate::config::get_config_path;
+use crate::config::{get_config_path, get_db_path};
 use crate::error::invalid;
-use crate::storage::json::JSONStore;
-use crate::storage::{Store, StoreValue};
+use crate::storage::sqlite::SQLiteStore;
+use crate::storage::{self, Store, StoreValue};
 
 pub fn init_action(_c: &Context) -> ActionResult {
-	let config_path = get_config_path();
+	let config_path = get_db_path();
 	let path = Path::new(&config_path);
 
 	if path.exists() {
 		println!("config file already exists");
 	}
 
-	JSONStore::with_force_create(true);
+	SQLiteStore::from_path(path);
 
 	Ok(())
 }
 
 pub fn list_action(c: &Context) -> ActionResult {
-	let store = JSONStore::with_force_create(c.bool_flag("force-create"));
+	let store = storage::load_storage();
 
 	for (key, value) in store.all().iter() {
 		println!("{}\t{}", key, value);
@@ -31,7 +31,7 @@ pub fn list_action(c: &Context) -> ActionResult {
 }
 
 pub fn clear_action(_c: &Context) -> ActionResult {
-	let mut store = JSONStore::new();
+	let mut store = storage::load_storage();
 
 	store.clear();
 
@@ -51,7 +51,7 @@ pub fn get_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let store = JSONStore::new();
+	let store = storage::load_storage();
 
 	let value = store.get(key);
 
@@ -86,12 +86,12 @@ pub fn set_action(c: &Context) -> ActionResult {
 		return Err(invalid("value"));
 	};
 
-	let mut store = JSONStore::new();
+	let mut store = storage::load_storage();
 
 	let value = StoreValue::Value(value_str.to_owned());
 	store.set(key, value.clone());
 
-	println!("{}\t{}", key, value);
+	println!("'{}' -> '{}'", key, value);
 
 	Ok(())
 }
@@ -101,7 +101,7 @@ pub fn remove_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let mut store = JSONStore::new();
+	let mut store = storage::load_storage();
 
 	match store.remove(key) {
 		Some(value) => println!("{}\t{}", key, value),
