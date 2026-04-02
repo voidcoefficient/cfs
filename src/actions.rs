@@ -94,7 +94,7 @@ pub fn set_action(c: &Context) -> ActionResult {
 	conf.insert(key, value).unwrap();
 
 	match set_json_object(conf) {
-		Ok(_) => println!("{}\t{}", key, value),
+		Ok(_) => println!("'{}' -> '{}'", key, value),
 		Err(err) => eprintln!("{}", err),
 	}
 
