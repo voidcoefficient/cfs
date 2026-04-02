@@ -2,8 +2,8 @@ use std::path::Path;
 
 use seahorse::{ActionError, ActionResult, Context};
 
-use crate::config::{get_config_path, get_db_path};
-use crate::error::invalid;
+use crate::config::get_db_path;
+use crate::error::{invalid, to_action_error};
 use crate::storage::sqlite::SQLiteStore;
 use crate::storage::{self, Store, StoreValue};
 
@@ -20,10 +20,10 @@ pub fn init_action(_c: &Context) -> ActionResult {
 	Ok(())
 }
 
-pub fn list_action(c: &Context) -> ActionResult {
+pub fn list_action(_c: &Context) -> ActionResult {
 	let store = storage::load_storage();
 
-	for (key, value) in store.all().iter() {
+	for (key, value) in store.all().map_err(to_action_error)?.iter() {
 		println!("{}\t{}", key, value);
 	}
 
@@ -33,9 +33,9 @@ pub fn list_action(c: &Context) -> ActionResult {
 pub fn clear_action(_c: &Context) -> ActionResult {
 	let mut store = storage::load_storage();
 
-	store.clear();
+	let count = store.clear().map_err(to_action_error)?;
 
-	println!("cleared config file at '{:?}'", get_config_path());
+	println!("removed {} keys from store", count);
 
 	Ok(())
 }
@@ -53,7 +53,7 @@ pub fn get_action(c: &Context) -> ActionResult {
 
 	let store = storage::load_storage();
 
-	let value = store.get(key);
+	let value = store.get(key).map_err(to_action_error)?;
 
 	match value {
 		Some(v) => {
@@ -89,7 +89,7 @@ pub fn set_action(c: &Context) -> ActionResult {
 	let mut store = storage::load_storage();
 
 	let value = StoreValue::Value(value_str.to_owned());
-	store.set(key, value.clone());
+	store.set(key, value.clone()).map_err(to_action_error)?;
 
 	println!("'{}' -> '{}'", key, value);
 
@@ -103,7 +103,7 @@ pub fn remove_action(c: &Context) -> ActionResult {
 
 	let mut store = storage::load_storage();
 
-	match store.remove(key) {
+	match store.remove(key).map_err(to_action_error)? {
 		Some(value) => println!("{}\t{}", key, value),
 		None => {
 			println!("key '{}' was not found", key);

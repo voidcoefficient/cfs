@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 use std::fs::{read_to_string, File};
 use std::io;
 use std::io::Write;
@@ -59,45 +61,50 @@ impl JSONStore {
 }
 
 impl Store for JSONStore {
-	fn all(&self) -> Vec<(String, StoreValue)> {
-		self
-			.store
-			.entries()
-			.map(|(key, value)| (key.to_owned(), value.into()))
-			.collect()
+	fn all(&self) -> Result<Vec<(String, StoreValue)>> {
+		Ok(
+			self
+				.store
+				.entries()
+				.map(|(key, value)| (key.to_owned(), value.into()))
+				.collect(),
+		)
 	}
 
-	fn get(&self, key: &str) -> Option<StoreValue> {
+	fn get(&self, key: &str) -> Result<Option<StoreValue>> {
 		if !self.store.has_key(key) {
-			return None;
+			return Ok(None);
 		}
 
-		Some(self.store[key].clone().into())
+		Ok(Some(self.store[key].clone().into()))
 	}
 
-	fn set(&mut self, key: &str, value: StoreValue) -> StoreValue {
+	fn set(&mut self, key: &str, value: StoreValue) -> Result<StoreValue> {
 		self.store.insert(key, value.clone()).unwrap();
 
 		self.save_store().unwrap();
 
-		value
+		Ok(value)
 	}
 
-	fn remove(&mut self, key: &str) -> Option<StoreValue> {
+	fn remove(&mut self, key: &str) -> Result<Option<StoreValue>> {
 		if !self.store.has_key(key) {
-			return None;
+			return Ok(None);
 		}
 
 		let value = self.store.remove(key);
 
 		self.save_store().unwrap();
 
-		return Some(value.into());
+		return Ok(Some(value.into()));
 	}
 
-	fn clear(&mut self) {
+	fn clear(&mut self) -> Result<usize> {
+		let len = self.store.len();
 		self.store.clear();
 
 		self.save_store().unwrap();
+
+		return Ok(len);
 	}
 }
