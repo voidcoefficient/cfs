@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::path::Path;
 
 use rusqlite::OptionalExtension as _;
@@ -17,78 +18,70 @@ impl SQLiteStore {
 			.execute_batch(include_str!("schema.sql"))
 			.expect("To Create DB");
 
-		return Self { connection: conn };
+		Self { connection: conn }
 	}
 }
 
 impl Store for SQLiteStore {
-	fn all(&self) -> Vec<(String, super::StoreValue)> {
-		let mut stmt = self.connection.prepare("SELECT key,value from KV").unwrap();
+	fn all(&self) -> Result<Vec<(String, super::StoreValue)>> {
+		let mut stmt = self.connection.prepare("SELECT key,value from KV")?;
 
 		let values = stmt
-			.query_map([], |row| {
-				let key: String = row.get(0)?;
-				let value = StoreValue::Value(row.get::<_, String>(1)?);
+			.query_map([], |row| Ok((row.get(0)?, StoreValue::Value(row.get(1)?))))?
+			.collect::<Result<Vec<_>, _>>()?;
 
-				return Ok((key, value));
-			})
-			.unwrap()
-			.collect::<Result<Vec<_>, _>>()
-			.unwrap();
-
-		return values;
+		Ok(values)
 	}
 
-	fn get(&self, key: &str) -> Option<super::StoreValue> {
+	fn get(&self, key: &str) -> Result<Option<super::StoreValue>> {
 		let stmt = self
 			.connection
 			.query_row(
 				"SELECT key,value from KV where key = ?1 LIMIT 1",
 				[key],
-				|row| Ok(StoreValue::Value(row.get(1).unwrap())),
+				|row| Ok(StoreValue::Value(row.get(1)?)),
 			)
-			.optional()
-			.unwrap();
+			.optional()?;
 
-		return stmt;
+		Ok(stmt)
 	}
 
-	fn set(&mut self, key: &str, value: super::StoreValue) -> super::StoreValue {
+	fn set(&mut self, key: &str, value: StoreValue) -> Result<StoreValue> {
 		let StoreValue::Value(value) = value else {
-			panic!("Invalid value passed into SQLiteStore GET [{}]", value)
+			return Err(anyhow!(
+				"Invalid value passed into SQLiteStore GET [{}]",
+				value
+			));
 		};
 
-		self
-			.connection
-			.execute(
-				"INSERT INTO KV VALUES(NULL,?1,?2) ON CONFLICT(key) DO UPDATE SET value = ?2 WHERE key = ?1",
-				[key, &value],
-			)
-			.unwrap();
+		self.connection.execute(
+			"INSERT INTO KV VALUES(NULL,?1,?2) ON CONFLICT(key) DO UPDATE SET value = ?2 WHERE key = ?1",
+			[key, &value],
+		)?;
 
-		return StoreValue::Value(value);
+		Ok(StoreValue::Value(value))
 	}
 
-	fn remove(&mut self, key: &str) -> Option<super::StoreValue> {
-		let value = self.get(key);
+	fn remove(&mut self, key: &str) -> Result<Option<StoreValue>> {
+		let value = self.get(key)?;
 
 		let Some(value) = value else {
-			return None;
+			return Ok(None);
 		};
 
 		let stmt = self
 			.connection
-			.execute("DELETE FROM KV where key = ?1", [key])
-			.unwrap();
+			.execute("DELETE FROM KV where key = ?1", [key])?;
 
 		if stmt == 0 {
 			panic!("Deleted 0 Rows when trying to delete Value from Store")
 		}
 
-		Some(value)
+		Ok(Some(value))
 	}
 
-	fn clear(&mut self) {
-		self.connection.execute("DELETE FROM KV", []).unwrap();
+	fn clear(&mut self) -> Result<usize> {
+		let deleted = self.connection.execute("DELETE FROM KV", [])?;
+		Ok(deleted)
 	}
 }

@@ -9,3 +9,9 @@ pub fn invalid(cause: &str) -> ActionError {
 		),
 	}
 }
+
+pub fn to_action_error(err: anyhow::Error) -> ActionError {
+	return ActionError {
+		message: err.to_string(),
+	};
+}
