@@ -1,14 +1,15 @@
 pub mod json;
+mod sqlite;
 mod value;
 
-pub use value::CfsValue;
+pub use value::StoreValue;
 
-pub trait CfsStorage {
-	fn all(&self) -> Vec<(String, CfsValue)>;
+pub trait Store {
+	fn all(&self) -> Vec<(String, StoreValue)>;
 
-	fn get(&self, key: &str) -> Option<CfsValue>;
-	fn set(&mut self, key: &str, value: CfsValue) -> CfsValue;
-	fn remove(&mut self, key: &str) -> Option<CfsValue>;
+	fn get(&self, key: &str) -> Option<StoreValue>;
+	fn set(&mut self, key: &str, value: StoreValue) -> StoreValue;
+	fn remove(&mut self, key: &str) -> Option<StoreValue>;
 
 	fn clear(&mut self);
 }

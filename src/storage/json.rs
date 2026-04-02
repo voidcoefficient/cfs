@@ -6,7 +6,7 @@ use std::process::exit;
 use json::JsonValue;
 
 use crate::config::get_config_path;
-use crate::storage::{CfsStorage, CfsValue};
+use crate::storage::{Store, StoreValue};
 
 pub fn init_store(force_create: bool) -> JsonValue {
 	let path = get_config_path();
@@ -30,11 +30,11 @@ pub fn init_store(force_create: bool) -> JsonValue {
 }
 
 #[derive(Clone, Debug)]
-pub struct CfsJSONStore {
+pub struct JSONStore {
 	store: JsonValue,
 }
 
-impl CfsJSONStore {
+impl JSONStore {
 	pub fn new() -> Self {
 		return Self {
 			store: init_store(false),
@@ -58,8 +58,8 @@ impl CfsJSONStore {
 	}
 }
 
-impl CfsStorage for CfsJSONStore {
-	fn all(&self) -> Vec<(String, CfsValue)> {
+impl Store for JSONStore {
+	fn all(&self) -> Vec<(String, StoreValue)> {
 		self
 			.store
 			.entries()
@@ -67,7 +67,7 @@ impl CfsStorage for CfsJSONStore {
 			.collect()
 	}
 
-	fn get(&self, key: &str) -> Option<CfsValue> {
+	fn get(&self, key: &str) -> Option<StoreValue> {
 		if !self.store.has_key(key) {
 			return None;
 		}
@@ -75,7 +75,7 @@ impl CfsStorage for CfsJSONStore {
 		Some(self.store[key].clone().into())
 	}
 
-	fn set(&mut self, key: &str, value: CfsValue) -> CfsValue {
+	fn set(&mut self, key: &str, value: StoreValue) -> StoreValue {
 		self.store.insert(key, value.clone()).unwrap();
 
 		self.save_store().unwrap();
@@ -83,7 +83,7 @@ impl CfsStorage for CfsJSONStore {
 		value
 	}
 
-	fn remove(&mut self, key: &str) -> Option<CfsValue> {
+	fn remove(&mut self, key: &str) -> Option<StoreValue> {
 		if !self.store.has_key(key) {
 			return None;
 		}
