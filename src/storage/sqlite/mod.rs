@@ -24,9 +24,9 @@ impl SQLiteStore {
 
 impl Store for SQLiteStore {
 	fn all(&self) -> Result<Vec<(String, super::StoreValue)>> {
-		let mut stmt = self.connection.prepare("SELECT key,value from KV")?;
+		let mut query = self.connection.prepare("SELECT key,value from KV")?;
 
-		let values = stmt
+		let values = query
 			.query_map([], |row| Ok((row.get(0)?, StoreValue::Value(row.get(1)?))))?
 			.collect::<Result<Vec<_>, _>>()?;
 
@@ -34,7 +34,7 @@ impl Store for SQLiteStore {
 	}
 
 	fn get(&self, key: &str) -> Result<Option<super::StoreValue>> {
-		let stmt = self
+		let query = self
 			.connection
 			.query_row(
 				"SELECT key,value from KV where key = ?1 LIMIT 1",
@@ -43,7 +43,7 @@ impl Store for SQLiteStore {
 			)
 			.optional()?;
 
-		Ok(stmt)
+		Ok(query)
 	}
 
 	fn set(&mut self, key: &str, value: StoreValue) -> Result<StoreValue> {
@@ -69,11 +69,11 @@ impl Store for SQLiteStore {
 			return Ok(None);
 		};
 
-		let stmt = self
+		let query = self
 			.connection
 			.execute("DELETE FROM KV where key = ?1", [key])?;
 
-		if stmt == 0 {
+		if query == 0 {
 			panic!("Deleted 0 Rows when trying to delete Value from Store")
 		}
 
