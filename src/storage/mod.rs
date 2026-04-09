@@ -1,12 +1,11 @@
 use anyhow::Result;
 
-pub mod json;
 pub mod sqlite;
 mod value;
 
 pub use value::StoreValue;
 
-use crate::config::get_db_path;
+use crate::config::{Config, StoreType};
 
 pub trait Store {
 	fn all(&self) -> Result<Vec<(String, StoreValue)>>;
@@ -18,7 +17,8 @@ pub trait Store {
 	fn clear(&mut self) -> Result<usize>;
 }
 
-//TODO: Change STORE Based on config.
-pub fn load_storage() -> impl Store {
-	return sqlite::SQLiteStore::from_path(get_db_path());
+pub fn load_storage(config: &Config) -> impl Store {
+	match config.store {
+		StoreType::Sqlite => return sqlite::SQLiteStore::new(&config.store_path),
+	}
 }

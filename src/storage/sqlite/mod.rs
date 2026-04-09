@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use std::path::Path;
 
 use rusqlite::OptionalExtension as _;
 
@@ -11,7 +10,7 @@ pub struct SQLiteStore {
 }
 
 impl SQLiteStore {
-	pub fn from_path<P: AsRef<Path>>(path: P) -> Self {
+	pub fn new(path: &str) -> Self {
 		let conn = rusqlite::Connection::open(path).expect("To Open SQLite DB");
 
 		conn

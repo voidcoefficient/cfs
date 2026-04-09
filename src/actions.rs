@@ -1,27 +1,21 @@
-use std::path::Path;
-
 use seahorse::{ActionError, ActionResult, Context};
 
-use crate::config::get_db_path;
+use crate::config::Config;
 use crate::error::{invalid, to_action_error};
-use crate::storage::sqlite::SQLiteStore;
 use crate::storage::{self, Store, StoreValue};
 
 pub fn init_action(_c: &Context) -> ActionResult {
-	let config_path = get_db_path();
-	let path = Path::new(&config_path);
+	let config = Config::load().map_err(to_action_error)?;
 
-	if path.exists() {
-		println!("config file already exists");
-	}
-
-	SQLiteStore::from_path(path);
+	storage::load_storage(&config);
 
 	Ok(())
 }
 
 pub fn list_action(_c: &Context) -> ActionResult {
-	let store = storage::load_storage();
+	let config = Config::load().map_err(to_action_error)?;
+
+	let store = storage::load_storage(&config);
 
 	for (key, value) in store.all().map_err(to_action_error)?.iter() {
 		println!("{}\t{}", key, value);
@@ -31,7 +25,9 @@ pub fn list_action(_c: &Context) -> ActionResult {
 }
 
 pub fn clear_action(_c: &Context) -> ActionResult {
-	let mut store = storage::load_storage();
+	let config = Config::load().map_err(to_action_error)?;
+
+	let mut store = storage::load_storage(&config);
 
 	let count = store.clear().map_err(to_action_error)?;
 
@@ -51,7 +47,9 @@ pub fn get_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let store = storage::load_storage();
+	let config = Config::load().map_err(to_action_error)?;
+
+	let store = storage::load_storage(&config);
 
 	let value = store.get(key).map_err(to_action_error)?;
 
@@ -86,7 +84,9 @@ pub fn set_action(c: &Context) -> ActionResult {
 		return Err(invalid("value"));
 	};
 
-	let mut store = storage::load_storage();
+	let config = Config::load().map_err(to_action_error)?;
+
+	let mut store = storage::load_storage(&config);
 
 	let value = StoreValue::Value(value_str.to_owned());
 	store.set(key, value.clone()).map_err(to_action_error)?;
@@ -101,7 +101,9 @@ pub fn remove_action(c: &Context) -> ActionResult {
 		return Err(invalid("key"));
 	};
 
-	let mut store = storage::load_storage();
+	let config = Config::load().map_err(to_action_error)?;
+
+	let mut store = storage::load_storage(&config);
 
 	match store.remove(key).map_err(to_action_error)? {
 		Some(value) => println!("{}\t{}", key, value),
