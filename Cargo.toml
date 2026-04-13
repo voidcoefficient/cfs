@@ -13,5 +13,7 @@ categories = ["command-line-utilities"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.102"
 json = "0.12.4"
+rusqlite = { version = "0.39.0", features = ["bundled"] }
 seahorse = "2.1.0"
