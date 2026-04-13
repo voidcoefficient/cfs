@@ -1,109 +1,116 @@
-use std::fs::File;
-use std::io::Write;
-use std::path::Path;
-use std::process::exit;
+use seahorse::{ActionError, ActionResult, Context};
 
-use json::JsonValue;
-use seahorse::Context;
+use crate::config::Config;
+use crate::error::{invalid, to_action_error};
+use crate::storage::{self, Store, StoreValue};
 
-use crate::json_object::{get_json_object_or_create, set_json_object};
-use crate::{config::get_config_path, error::invalid};
+pub fn init_action(_c: &Context) -> ActionResult {
+	let config = Config::load().map_err(to_action_error)?;
 
-pub fn init_action(c: &Context) {
-	let config_path = get_config_path();
-	let path = Path::new(&config_path);
+	storage::load_storage(&config);
 
-	if path.exists() {
-		println!("config file already exists");
-	} else {
-		clear_action(c);
-	}
+	Ok(())
 }
 
-pub fn list_action(c: &Context) {
-	let conf = get_json_object_or_create(c.bool_flag("force-create"));
+pub fn list_action(_c: &Context) -> ActionResult {
+	let config = Config::load().map_err(to_action_error)?;
 
-	for (key, value) in conf.entries() {
+	let store = storage::load_storage(&config);
+
+	for (key, value) in store.all().map_err(to_action_error)?.iter() {
 		println!("{}\t{}", key, value);
 	}
+
+	Ok(())
 }
 
-pub fn clear_action(_c: &Context) {
-	let mut file = File::create(get_config_path()).unwrap();
-	write!(file, "{}", "{}").unwrap();
-	println!("cleared config file at '{:?}'", get_config_path());
+pub fn clear_action(_c: &Context) -> ActionResult {
+	let config = Config::load().map_err(to_action_error)?;
+
+	let mut store = storage::load_storage(&config);
+
+	let count = store.clear().map_err(to_action_error)?;
+
+	println!("removed {} keys from store", count);
+
+	Ok(())
 }
 
-pub fn get_action(c: &Context) {
+pub fn get_action(c: &Context) -> ActionResult {
 	if c.args.len() != 1 {
-		return invalid("command");
+		return Err(invalid("command"));
 	}
 
-	let conf = get_json_object_or_create(c.bool_flag("force-create"));
-	let key = c.args.get(0);
+	let key = c.args.get(0).to_owned();
 
 	let Some(key) = key else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
-	if conf.has_key(&key) {
-		println!("{}", conf[key]);
-		return;
+	let config = Config::load().map_err(to_action_error)?;
+
+	let store = storage::load_storage(&config);
+
+	let value = store.get(key).map_err(to_action_error)?;
+
+	match value {
+		Some(v) => {
+			println!("{}", v)
+		}
+		None => {
+			if c.bool_flag("ignore_null") {
+				println!();
+			} else {
+				return Err(ActionError {
+					message: format!("could not find key '{}'", key),
+				});
+			}
+		}
 	}
 
-	if c.bool_flag("ignore-null") {
-		println!();
-	} else {
-		eprintln!("could not find key '{}'", key);
-		exit(1);
-	}
+	Ok(())
 }
 
-pub fn set_action(c: &Context) {
+pub fn set_action(c: &Context) -> ActionResult {
 	if c.args.len() != 2 {
-		return invalid("command");
+		return Err(invalid("command"));
 	}
 
-	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
-
 	let Some(key) = c.args.get(0) else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
 	let Some(value_str) = c.args.get(1) else {
-		return invalid("value");
+		return Err(invalid("value"));
 	};
 
-	let json_value = JsonValue::from(value_str.as_str());
-	let value = json_value.as_str().unwrap();
+	let config = Config::load().map_err(to_action_error)?;
 
-	if conf.has_key(key) {
-		conf.remove(key);
-	}
+	let mut store = storage::load_storage(&config);
 
-	conf.insert(key, value).unwrap();
+	let value = StoreValue::Value(value_str.to_owned());
+	store.set(key, value.clone()).map_err(to_action_error)?;
 
-	match set_json_object(conf) {
-		Ok(_) => println!("updated config file"),
-		Err(err) => eprintln!("{}", err),
-	}
+	println!("'{}' -> '{}'", key, value);
+
+	Ok(())
 }
 
-pub fn remove_action(c: &Context) {
-	let mut conf = get_json_object_or_create(c.bool_flag("force-create"));
+pub fn remove_action(c: &Context) -> ActionResult {
 	let Some(key) = c.args.get(0) else {
-		return invalid("key");
+		return Err(invalid("key"));
 	};
 
-	if !conf.has_key(&key) {
-		println!("key '{}' was not found", key);
-		return;
+	let config = Config::load().map_err(to_action_error)?;
+
+	let mut store = storage::load_storage(&config);
+
+	match store.remove(key).map_err(to_action_error)? {
+		Some(value) => println!("{}\t{}", key, value),
+		None => {
+			println!("key '{}' was not found", key);
+		}
 	}
 
-	conf.remove(&key);
-
-	match set_json_object(conf) {
-		Ok(_) => println!("updated config file"),
-		Err(err) => eprintln!("{}", err),
-	}
+	Ok(())
 }

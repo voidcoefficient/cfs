@@ -1,6 +1,6 @@
-use std::{env, io};
+use std::{env, process::exit};
 
-use seahorse::App;
+use seahorse::{ActionResult, App};
 
 use crate::commands::{clear, get_value, init, list, remove_value, set_value};
 
@@ -9,9 +9,9 @@ mod commands;
 mod config;
 mod error;
 mod flags;
-mod json_object;
+mod storage;
 
-fn main() -> io::Result<()> {
+fn main() -> ActionResult {
 	let args: Vec<String> = env::args().collect();
 	let app = App::new(env!("CARGO_PKG_NAME"))
 		.description(env!("CARGO_PKG_DESCRIPTION"))
@@ -25,7 +25,13 @@ fn main() -> io::Result<()> {
 		.command(remove_value())
 		.command(clear());
 
-	app.run(args);
+	match app.run_with_result(args) {
+		Ok(_) => (),
+		Err(action_error) => {
+			eprintln!("{}", action_error.message);
+			exit(1)
+		}
+	};
 
 	Ok(())
 }
